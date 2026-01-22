@@ -4,46 +4,50 @@
 #include <DHT.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
+#include <math.h>
 
-
+/* ---------- SENSOR CONFIG ---------- */
 #define DHTPIN 4
 #define DHTTYPE DHT22
 
 DHT dht(DHTPIN, DHTTYPE);
 Adafruit_MPU6050 mpu;
 
+/* ---------- WIFI CONFIG ---------- */
 const char* ssid = "Wokwi-GUEST";
 const char* password = "";
+
+/* ---------- CLOUD SERVER (IMPORTANT) ---------- */
+/* NOTE: HTTP (not HTTPS) – REQUIRED for ESP32 + Render */
 const char* serverURL =
-  "https://iot-machine-monitoring-system.onrender.com/push";
+  "http://iot-machine-monitoring-system.onrender.com/push";
 
 void setup() {
   Serial.begin(115200);
+  delay(1000);
+
   dht.begin();
   Wire.begin(21, 22);
 
   if (!mpu.begin()) {
-    Serial.println("MPU6050 not detected");
+    Serial.println("MPU6050 not detected!");
     while (1);
   }
 
+  Serial.print("Connecting to WiFi");
   WiFi.begin(ssid, password);
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
+
   Serial.println("\nWiFi Connected");
 }
 
 void loop() {
   float temperature = dht.readTemperature();
   float humidity = dht.readHumidity();
-
-  if (isnan(temperature) || isnan(humidity)) {
-    Serial.println("DHT read failed");
-    delay(2000);
-    return;
-  }
 
   sensors_event_t accel, gyro, temp;
   mpu.getEvent(&accel, &gyro, &temp);
@@ -54,31 +58,32 @@ void loop() {
     accel.acceleration.z * accel.acceleration.z
   );
 
-  Serial.printf("Temp: %.1f | Hum: %.1f | Vib: %.2f\n",
-                temperature, humidity, vibration);
+  Serial.print("Temp: ");
+  Serial.print(temperature);
+  Serial.print(" | Hum: ");
+  Serial.print(humidity);
+  Serial.print(" | Vib: ");
+  Serial.println(vibration);
 
   if (WiFi.status() == WL_CONNECTED) {
-  HTTPClient http;
-  http.begin(serverURL);   // HTTP only
-  http.addHeader("Content-Type", "application/json");
+    HTTPClient http;
 
-  String payload = "{";
-  payload += "\"temperature\":" + String(temperature, 1) + ",";
-  payload += "\"humidity\":" + String(humidity, 1) + ",";
-  payload += "\"vibration\":" + String(vibration, 2) + ",";
-  payload += "\"status\":\"RUNNING\"";
-  payload += "}";
+    http.begin(serverURL);  // HTTP (NO SSL)
+    http.addHeader("Content-Type", "application/json");
 
-  int code = http.POST(payload);
-  Serial.print("HTTP code: ");
-  Serial.println(code);
+    String payload = "{";
+    payload += "\"temperature\":" + String(temperature, 1) + ",";
+    payload += "\"humidity\":" + String(humidity, 1) + ",";
+    payload += "\"vibration\":" + String(vibration, 2) + ",";
+    payload += "\"status\":\"RUNNING\"";
+    payload += "}";
 
-  http.end();
-}
+    int httpCode = http.POST(payload);
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpCode);
 
+    http.end();
+  }
 
- 
-
-  
-  delay(5000);
+  delay(5000);  // send data every 5 seconds
 }
