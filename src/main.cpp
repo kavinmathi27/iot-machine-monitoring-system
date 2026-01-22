@@ -66,24 +66,26 @@ void loop() {
   Serial.println(vibration);
 
   if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
+  HTTPClient http;
 
-    http.begin(serverURL);  // HTTP (NO SSL)
-    http.addHeader("Content-Type", "application/json");
+  http.begin(serverURL);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  http.addHeader("Content-Type", "application/json");
 
-    String payload = "{";
-    payload += "\"temperature\":" + String(temperature, 1) + ",";
-    payload += "\"humidity\":" + String(humidity, 1) + ",";
-    payload += "\"vibration\":" + String(vibration, 2) + ",";
-    payload += "\"status\":\"RUNNING\"";
-    payload += "}";
+  String payload = "{";
+  payload += "\"temperature\":" + String(temperature, 1) + ",";
+  payload += "\"humidity\":" + String(humidity, 1) + ",";
+  payload += "\"vibration\":" + String(vibration, 2) + ",";
+  payload += "\"status\":\"RUNNING\"";
+  payload += "}";
 
-    int httpCode = http.POST(payload);
-    Serial.print("HTTP Response code: ");
-    Serial.println(httpCode);
+  int httpCode = http.POST(payload);
+  Serial.print("HTTP Response code: ");
+  Serial.println(httpCode);
 
-    http.end();
-  }
+  http.end();
+}
+
 
   delay(5000);  // send data every 5 seconds
 }
