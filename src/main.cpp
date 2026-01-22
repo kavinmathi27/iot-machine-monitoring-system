@@ -4,6 +4,8 @@
 #include <DHT.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
+#include <WiFiClientSecure.h>
+
 
 #define DHTPIN 4
 #define DHTTYPE DHT22
@@ -15,6 +17,7 @@ const char* ssid = "Wokwi-GUEST";
 const char* password = "";
 const char* serverURL ="https://iot-machine-monitoring-system.onrender.com/push";
 
+WiFiClientSecure secureClient;
 
 void setup() {
   Serial.begin(115200);
@@ -56,20 +59,25 @@ void loop() {
   Serial.printf("Temp: %.1f | Hum: %.1f | Vib: %.2f\n",
                 temperature, humidity, vibration);
 
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(serverURL);
-    http.addHeader("Content-Type", "application/json");
+ if (WiFi.status() == WL_CONNECTED) {
+  secureClient.setInsecure();
 
-    String payload = "{";
-    payload += "\"temperature\":" + String(temperature,1) + ",";
-    payload += "\"humidity\":" + String(humidity,1) + ",";
-    payload += "\"vibration\":" + String(vibration,2) + ",";
-    payload += "\"status\":\"RUNNING\"}";
-    
-    http.POST(payload);
-    http.end();
-  }
+  HTTPClient http;
+  http.begin(secureClient, serverURL);
+  http.addHeader("Content-Type", "application/json");
 
+  String payload = "{";
+  payload += "\"temperature\":" + String(temperature, 1) + ",";
+  payload += "\"humidity\":" + String(humidity, 1) + ",";
+  payload += "\"vibration\":" + String(vibration, 2) + ",";
+  payload += "\"status\":\"RUNNING\"";
+  payload += "}";
+
+  int httpResponseCode = http.POST(payload);
+  Serial.print("HTTP Response code: ");
+  Serial.println(httpResponseCode);
+
+  http.end();
+}
   delay(5000);
 }
