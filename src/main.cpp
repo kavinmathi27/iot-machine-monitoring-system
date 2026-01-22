@@ -4,7 +4,6 @@
 #include <DHT.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
-#include <WiFiClientSecure.h>
 
 
 #define DHTPIN 4
@@ -15,9 +14,8 @@ Adafruit_MPU6050 mpu;
 
 const char* ssid = "Wokwi-GUEST";
 const char* password = "";
-const char* serverURL ="https://iot-machine-monitoring-system.onrender.com/push";
-
-WiFiClientSecure secureClient;
+const char* serverURL =
+  "https://iot-machine-monitoring-system.onrender.com/push";
 
 void setup() {
   Serial.begin(115200);
@@ -59,11 +57,9 @@ void loop() {
   Serial.printf("Temp: %.1f | Hum: %.1f | Vib: %.2f\n",
                 temperature, humidity, vibration);
 
- if (WiFi.status() == WL_CONNECTED) {
-  secureClient.setInsecure();
-
+  if (WiFi.status() == WL_CONNECTED) {
   HTTPClient http;
-  http.begin(secureClient, serverURL);
+  http.begin(serverURL);   // HTTP only
   http.addHeader("Content-Type", "application/json");
 
   String payload = "{";
@@ -73,11 +69,16 @@ void loop() {
   payload += "\"status\":\"RUNNING\"";
   payload += "}";
 
-  int httpResponseCode = http.POST(payload);
-  Serial.print("HTTP Response code: ");
-  Serial.println(httpResponseCode);
+  int code = http.POST(payload);
+  Serial.print("HTTP code: ");
+  Serial.println(code);
 
   http.end();
 }
+
+
+ 
+
+  
   delay(5000);
 }
