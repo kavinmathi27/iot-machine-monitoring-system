@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smart Machine Monitoring</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{font-family:Arial;background:#f3f4f6;padding:20px}
+h1,h2{text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px}
+.card{background:#fff;padding:15px;border-radius:10px;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+.status{font-size:20px;font-weight:bold}
+.success{color:#16a34a}
+.warning{color:#f59e0b}
+.danger{color:#dc2626}
+canvas{max-height:240px;margin-top:20px}
+table{width:100%;margin-top:20px;border-collapse:collapse;background:#fff}
+th,td{padding:10px;border:1px solid #e5e7eb;text-align:center}
+button{padding:10px 16px;margin:10px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer}
+</style>
+</head>
+
+<body>
+
+<h1>⚙️ Smart Machine Monitoring Dashboard</h1>
+
+<div class="grid">
+  <div class="card"><h3>Temperature (°C)</h3><h2 id="temp">--</h2></div>
+  <div class="card"><h3>Humidity (%)</h3><h2 id="hum">--</h2></div>
+  <div class="card"><h3>Vibration</h3><h2 id="vib">--</h2></div>
+  <div class="card"><h3>Status</h3><div id="status" class="status success">RUNNING</div></div>
+</div>
+
+<h2>📊 Live Charts</h2>
+<canvas id="tempChart"></canvas>
+<canvas id="vibChart"></canvas>
+
+<div style="text-align:center">
+  <button onclick="exportCSV()">⬇ CSV</button>
+  <button onclick="exportPDF()">⬇ PDF</button>
+</div>
+
+<table>
+<thead>
+<tr><th>Time</th><th>Temp</th><th>Hum</th><th>Vib</th><th>Status</th></tr>
+</thead>
+<tbody id="log">
+<tr><td colspan="5">Waiting for data...</td></tr>
+</tbody>
+</table>
+
+<script>
+const tempChart=new Chart(tempChartEl(),{type:"line",
+data:{labels:[],datasets:[{data:[],borderColor:"#dc2626"}]},
+options:{plugins:{legend:{display:false}}}});
+
+const vibChart=new Chart(vibChartEl(),{type:"line",
+data:{labels:[],datasets:[{data:[],borderColor:"#2563eb"}]},
+options:{plugins:{legend:{display:false}}}});
+
+function tempChartEl(){return document.getElementById("tempChart")}
+function vibChartEl(){return document.getElementById("vibChart")}
+
+function updateStatus(t,v){
+ let cls="success",txt="RUNNING";
+ if(t>60||v>15){cls="danger";txt="CRITICAL";}
+ else if(t>50||v>12){cls="warning";txt="WARNING";}
+ status.className="status "+cls;
+ status.innerText=txt;
+}
+
+function fetchData(){
+ fetch("/data").then(r=>r.json()).then(d=>{
+  if(!d.temperature)return;
+  temp.innerText=d.temperature;
+  hum.innerText=d.humidity;
+  vib.innerText=d.vibration.toFixed(2);
+  updateStatus(d.temperature,d.vibration);
+
+  tempChart.data.labels.push(d.time);
+  tempChart.data.datasets[0].data.push(d.temperature);
+  vibChart.data.labels.push(d.time);
+  vibChart.data.datasets[0].data.push(d.vibration);
+
+  if(tempChart.data.labels.length>15){
+   tempChart.data.labels.shift();
+   tempChart.data.datasets[0].data.shift();
+   vibChart.data.labels.shift();
+   vibChart.data.datasets[0].data.shift();
+  }
+  tempChart.update(); vibChart.update();
+
+  log.innerHTML+=`
+   <tr>
+    <td>${d.time}</td>
+    <td>${d.temperature}</td>
+    <td>${d.humidity}</td>
+    <td>${d.vibration}</td>
+    <td>${d.status}</td>
+   </tr>`;
+ });
+}
+
+function exportCSV(){window.open("/export/csv","_blank")}
+function exportPDF(){window.open("/export/pdf","_blank")}
+setInterval(fetchData,2000);
+</script>
+
+</body>
+</html>
