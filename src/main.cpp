@@ -13,7 +13,8 @@ Adafruit_MPU6050 mpu;
 
 const char* ssid = "Wokwi-GUEST";
 const char* password = "";
-const char* serverURL = "http://10.178.253.192/push";
+const char* serverURL ="https://iot-machine-monitoring-system.onrender.com/push";
+
 
 void setup() {
   Serial.begin(115200);
